@@ -1,0 +1,286 @@
+You sent
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Money Tracker with Password Protection</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f0f5;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            width: 60%;
+            margin: 50px auto;
+            background-color: #fff;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        h1, h2 {
+            text-align: center;
+            font-weight: 600;
+            color: #333;
+        }
+
+        form, .search-section {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 20px;
+        }
+
+        label {
+            margin: 10px 0 5px;
+            font-weight: bold;
+        }
+
+        input, textarea, button {
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: #007bff;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: center;
+            font-size: 16px;
+        }
+
+        thead {
+            background-color: #007bff;
+            color: white;
+        }
+
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        .search-section input, .search-section button {
+            width: 100%;
+        }
+
+        .total-section p {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+            margin: 10px 0;
+        }
+
+        .password-section input {
+            width: calc(100% - 20px);
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .money-table-section.hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Money Tracker</h1>
+
+        <!-- Form to add new entry -->
+        <form id="moneyForm">
+            <label for="name">Name:</label>
+            <input type="text" id="name" required>
+
+            <label for="date">Date:</label>
+            <input type="date" id="date" required>
+
+            <label for="amount">Amount:</label>
+            <input type="number" id="amount" required>
+
+            <label for="description">Description:</label>
+            <textarea id="description" rows="3" placeholder="Enter details about when the money was given..."></textarea>
+
+            <button type="submit">Add Entry</button>
+        </form>
+
+        <!-- Password Section -->
+        <div class="password-section">
+            <h2>Enter Password to View Records</h2>
+            <input type="password" id="password" placeholder="Enter password">
+            <button id="passwordBtn">Submit Password</button>
+        </div>
+
+        <!-- Search section (hidden by default) -->
+        <div class="search-section hidden" id="searchSection">
+            <h2>Search Records</h2>
+            <input type="text" id="searchName" placeholder="Enter name to search...">
+            <button id="searchBtn">Search</button>
+            <button id="totalBtn">Show Total</button>
+            <div class="total-section">
+                <p id="totalAmount"></p>
+            </div>
+        </div>
+
+        <!-- Table to display records (hidden by default) -->
+        <div class="money-table-section hidden" id="moneyTableSection">
+            <h2>Money Records</h2>
+            <table id="moneyTable">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Date</th>
+                        <th>Amount</th>
+                        <th>10-Day Period</th>
+                        <th>Description</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const records = JSON.parse(localStorage.getItem('moneyRecords')) || []; // Load records from localStorage or initialize empty
+        const password = 'admin123'; // Define your password here
+
+        // Function to add records to the table
+        function addToTable(record, index) {
+            const table = document.querySelector('#moneyTable tbody');
+            const row = table.insertRow();
+            row.innerHTML = `
+                <td>${record.name}</td>
+                <td>${record.date}</td>
+                <td>${record.amount}</td>
+                <td>${record.tenDayPeriod}</td>
+                <td>${record.description}</td>
+                <td><button onclick="deleteRecord(${index})">Delete</button></td>
+            `;
+        }
+
+        // Load existing records from localStorage on page load
+        window.addEventListener('load', function() {
+            records.forEach((record, index) => {
+                addToTable(record, index);
+            });
+        });
+
+        // Add new entry to the records and save to localStorage
+        document.getElementById('moneyForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const name = document.getElementById('name').value;
+            const date = document.getElementById('date').value;
+            const amount = parseFloat(document.getElementById('amount').value);
+            const description = document.getElementById('description').value;
+
+            const tenDaysLater = new Date(date);
+            tenDaysLater.setDate(tenDaysLater.getDate() + 10);
+            const formattedDate = new Date(tenDaysLater).toISOString().split('T')[0];
+
+            const newRecord = { name, date, amount, tenDayPeriod: formattedDate, description };
+            
+            // Save the entry in records array and localStorage
+            records.push(newRecord);
+            localStorage.setItem('moneyRecords', JSON.stringify(records));
+
+            // Add the entry to the table
+            addToTable(newRecord, records.length - 1);
+
+            // Clear the form after submission
+            document.getElementById('moneyForm').reset();
+        });
+
+        // Password protection to show search section and records
+        document.getElementById('passwordBtn').addEventListener('click', function() {
+            const inputPassword = document.getElementById('password').value;
+
+            if (inputPassword === password) {
+                document.getElementById('searchSection').classList.remove('hidden');
+                document.getElementById('moneyTableSection').classList.remove('hidden');
+                alert('Access Granted');
+            } else {
+                alert('Incorrect Password');
+            }
+        });
+
+        // Search for an individual's records
+        document.getElementById('searchBtn').addEventListener('click', function() {
+            const searchName = document.getElementById('searchName').value.trim().toLowerCase();
+            const tableBody = document.querySelector('#moneyTable tbody');
+
+            // Clear previous search results
+            tableBody.innerHTML = '';
+
+            // Filter and display records for the searched name
+            const filteredRecords = records.filter(record => record.name.toLowerCase() === searchName);
+            filteredRecords.forEach((record, index) => {
+                addToTable(record, index);
+            });
+
+            if (filteredRecords.length === 0) {
+                alert('No records found for this name');
+            }
+        });
+
+        // Show total amount given by an individual
+        document.getElementById('totalBtn').addEventListener('click', function() {
+            const searchName = document.getElementById('searchName').value.trim().toLowerCase();
+            const totalAmountElement = document.getElementById('totalAmount');
+
+            // Filter records and calculate total amount
+            const totalAmount = records
+                .filter(record => record.name.toLowerCase() === searchName)
+                .reduce((sum, record) => sum + record.amount, 0);
+
+            if (totalAmount > 0) {
+                totalAmountElement.textContent = `Total amount given by ${searchName}: ${totalAmount}`;
+            } else {
+                totalAmountElement.textContent = 'No records found or total amount is zero.';
+            }
+        });
+
+        // Delete a record by index
+        function deleteRecord(index) {
+            // Remove the record from the array
+            records.splice(index, 1);
+
+            // Update localStorage
+            localStorage.setItem('moneyRecords', JSON.stringify(records));
+
+            // Reload the table to reflect changes
+            document.querySelector('#moneyTable tbody').innerHTML = '';
+            records.forEach((record, i) => {
+                addToTable(record, i);
+            });
+        }
+    </script>
+</body>
+</html>
